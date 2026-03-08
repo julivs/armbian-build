@@ -1,0 +1,2 @@
+Guia de linguagem DTS: https://docs.kernel.org/devicetree/bindings/dts-coding-style.html
+

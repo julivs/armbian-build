@@ -19,6 +19,9 @@ warn() { echo -e "${YELLOW}[!]${NC} $*"; }
 fail() { echo -e "${RED}[FAIL]${NC} $*"; exit 1; }
 step() { echo -e "\n${CYAN}=== $* ===${NC}"; }
 
+NON_INTERACTIVE=false
+[[ "${1:-}" == "--yes" ]] && NON_INTERACTIVE=true
+
 EMMC_DEV="/dev/mmcblk2"
 EMMC_PART="${EMMC_DEV}p1"
 DATA_MOUNT="/data"
@@ -50,7 +53,12 @@ echo "  /tmp   → tmpfs (RAM, 256MB)"
 echo ""
 echo -e "${YELLOW}ATENÇÃO: A eMMC será formatada. Todo conteúdo atual será apagado.${NC}"
 echo ""
-read -rp "Continuar? [s/N] " CONFIRM
+if $NON_INTERACTIVE; then
+    CONFIRM="s"
+    warn "Modo não-interativo (--yes): confirmação automática"
+else
+    read -rp "Continuar? [s/N] " CONFIRM
+fi
 [[ "$CONFIRM" =~ ^[sS]$ ]] || { echo "Abortado."; exit 0; }
 
 # ── Formatar eMMC ────────────────────────────────────────────────────────────
@@ -164,7 +172,12 @@ echo "  findmnt /home   # deve mostrar mmcblk2p1"
 echo "  findmnt /var    # deve mostrar mmcblk2p1"
 echo "  findmnt /tmp    # deve mostrar tmpfs"
 echo ""
-echo -e "${YELLOW}Rebootando em 5 segundos... Ctrl+C para cancelar.${NC}"
-for i in 5 4 3 2 1; do echo -n "$i "; sleep 1; done
-echo ""
-reboot
+if $NON_INTERACTIVE; then
+    echo -e "${YELLOW}Modo não-interativo: reboot não automático.${NC}"
+    echo "Execute manualmente: reboot"
+else
+    echo -e "${YELLOW}Rebootando em 5 segundos... Ctrl+C para cancelar.${NC}"
+    for i in 5 4 3 2 1; do echo -n "$i "; sleep 1; done
+    echo ""
+    reboot
+fi

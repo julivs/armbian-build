@@ -3,7 +3,7 @@
 BOARD_NAME="Tomate MCD-125"
 BOARD_VENDOR="tomate"
 BOARDFAMILY="sun50iw9"
-BOARD_MAINTAINER=""
+BOARD_MAINTAINER="julivs"
 BOOTCONFIG="tomate_mcd125_lpddr3_defconfig"
 BOOT_LOGO="desktop"
 KERNEL_TARGET="current"

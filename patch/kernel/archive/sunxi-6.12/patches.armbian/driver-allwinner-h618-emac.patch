@@ -427,7 +427,7 @@ new file mode 100644
 index 000000000000..111111111111
 --- /dev/null
 +++ b/drivers/net/ethernet/allwinner/sunxi-gmac.c
-@@ -0,0 +1,2217 @@
+@@ -0,0 +1,2228 @@
 +/*
 + * linux/drivers/net/ethernet/allwinner/sunxi_gmac.c
 + *
@@ -1103,8 +1103,20 @@ index 000000000000..111111111111
 +            }
 +
 +            if (IS_ERR_OR_NULL(phydev_tmp) || phydev_tmp->phy_id == 0xffff ||
-+                phydev_tmp->phy_id == 0x00 || phydev_tmp->phy_id == AC300_ID)
++                phydev_tmp->phy_id == 0x00)
 +                continue;
++            if (phydev_tmp->phy_id == AC300_ID) {
++                /* AC300 internal EPHY: init via MDIO then re-scan for EPHY_ID */
++                phy_write(phydev_tmp, 0x00, 0x1f83); /* release reset */
++                phy_write(phydev_tmp, 0x00, 0x1fb7); /* clk gating */
++                phy_write(phydev_tmp, 0x05, 0xa819);
++                phy_write(phydev_tmp, 0x06, 0x00);
++                msleep(1000);
++                phy_device_remove(phydev_tmp);
++                phydev_tmp = mdiobus_scan_c22(new_bus, addr);
++                if (IS_ERR_OR_NULL(phydev_tmp) || phydev_tmp->phy_id != EPHY_ID)
++                    continue;
++            }
 +
 +            if (phydev_tmp->phy_id == EPHY_ID || phydev_tmp->phy_id == IP101G_ID) {
 +                phydev = phydev_tmp;
@@ -2308,11 +2320,10 @@ index 000000000000..111111111111
 +    char power[20];
 +    int i;
 +
-+// #ifdef CONFIG_SUNXI_EXT_PHY
-+    priv->phy_ext = EXT_PHY;
-+// #else
-+//     priv->phy_ext = INT_PHY;
-+// #endif
++    if (of_property_read_bool(np, "allwinner,use-internal-phy"))
++        priv->phy_ext = INT_PHY;
++    else
++        priv->phy_ext = EXT_PHY;
 +
 +    /* config memery resource */
 +    res = platform_get_resource(pdev, IORESOURCE_MEM, 0);

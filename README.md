@@ -3,6 +3,40 @@
   <br><br>
 </h3>
 
+## Fork: Tomate MCD-125 (Allwinner H313)
+
+This fork adds Armbian support for the **Tomate MCD-125** TV box
+(Allwinner H313, 2GB LPDDR3, 16GB eMMC).
+
+### Status
+
+| Feature | Status |
+|---|---|
+| Boot (SD card) | ✅ Working |
+| USB host | ✅ Working |
+| HDMI | ✅ Working |
+| UART | ✅ Working (115200) |
+| Ethernet (EMAC) | ❌ PHY not detected — use USB adapter |
+| Wi-Fi (SSV6558) | ❌ Not yet supported |
+
+> **Ethernet workaround:** Use a USB-Ethernet adapter (RTL8152/RTL8153-based,
+> e.g. TP-Link UE300). The onboard EMAC PHY is not detected by the AC300 driver.
+
+### Build
+
+```bash
+./compile.sh build BOARD=tomate-mcd125 BRANCH=current RELEASE=bookworm \
+  BUILD_DESKTOP=no BUILD_MINIMAL=no KERNEL_CONFIGURE=no EXPERT=yes
+```
+
+### Flash & Deploy
+
+```bash
+./deploy_mcd125.sh /dev/sdX
+```
+
+---
+
 ## Purpose of This Repository
 
 The **Armbian Linux Build Framework** creates customizable OS images based on **Debian** or **Ubuntu** for **single-board computers (SBCs)** and embedded devices.

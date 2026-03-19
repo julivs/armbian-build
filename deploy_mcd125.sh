@@ -86,7 +86,8 @@ if mount | grep -q "^${DEV}"; then
 fi
 
 # Verificar tamanho (recusar > 64GB — provavelmente não é SD card)
-SIZE_BYTES=$(blockdev --getsize64 "$DEV" 2>/dev/null || echo 0)
+DEV_NAME="${DEV##*/}"
+SIZE_BYTES=$(( $(cat "/sys/block/${DEV_NAME}/size" 2>/dev/null || echo 0) * 512 ))
 SIZE_GB=$((SIZE_BYTES / 1024 / 1024 / 1024))
 [ "$SIZE_GB" -gt 64 ] && error "$DEV tem ${SIZE_GB}GB — grande demais para SD card. Abortando."
 [ "$SIZE_GB" -lt 1 ]  && error "$DEV tem ${SIZE_GB}GB — pequeno demais. Abortando."
@@ -171,12 +172,25 @@ echo "     enquanto conecta a energia; soltar após ~3 segundos"
 echo "   • eMMC sem bootloader válido: conectar energia normalmente"
 echo ""
 echo "3. No terminal Armbian (HDMI ou UART 115200):"
-echo "   root@tomate-mcd125:~# armbian-install"
-echo "   → Selecionar eMMC como destino"
+echo "   # Copiar e rodar o script de flash da eMMC:"
+echo "   scp emmc_boot_setup.sh root@<IP>:~/"
+echo "   root@tomate-mcd125:~# bash emmc_boot_setup.sh"
 echo ""
-echo "4. Após instalação: retirar SD e religar"
+echo "   O script:"
+echo "   • Verifica que mmcblk2 (eMMC) está presente"
+echo "   • Localiza o U-Boot e confirma TOC0"
+echo "   • Grava U-Boot na eMMC (seek=16)"
+echo "   • Verifica TOC0 no setor 16 da eMMC"
+echo ""
+echo "4. Para instalar sistema completo na eMMC:"
+echo "   root@tomate-mcd125:~# armbian-install"
+echo "   → Selecionar: Boot from eMMC - System on eMMC"
+echo "   OU: bash emmc_boot_setup.sh --full"
+echo ""
+echo "5. Após instalação: retirar SD e religar"
 echo ""
 echo "UART: ./uart_debug.sh"
+echo "eMMC: ./emmc_boot_setup.sh"
 echo "Docs: documents/tomate-mcd125-armbian-deploy.md"
 echo ""
 

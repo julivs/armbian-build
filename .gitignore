@@ -34,6 +34,7 @@ Dockerfile
 documents
 
 ### Tomate MCD-125 device-specific files ###
+/boot/
 emmc_uboot_backup.bin
 ls_boot.txt
 uart-1.log

@@ -34,7 +34,17 @@ sudo apt-get update -qq
 sudo apt-get upgrade -y
 
 # --------------------------------------------------------------------------
-# 2. Build dependencies
+# 2. SSH server
+# --------------------------------------------------------------------------
+step "Configuring SSH server"
+sudo apt-get install -y openssh-server
+sudo systemctl enable ssh
+sudo systemctl start ssh
+SSH_IP=$(hostname -I | awk '{print $1}')
+info "SSH server active — connect with: ssh ${USER}@${SSH_IP}"
+
+# --------------------------------------------------------------------------
+# 3. Build dependencies
 # --------------------------------------------------------------------------
 step "Installing build dependencies"
 sudo apt-get install -y \
@@ -55,7 +65,7 @@ sudo apt-get install -y \
     fakeroot
 
 # --------------------------------------------------------------------------
-# 3. Docker CE
+# 4. Docker CE
 # --------------------------------------------------------------------------
 step "Installing Docker CE"
 if command -v docker &>/dev/null; then
@@ -91,7 +101,7 @@ if ! groups | grep -qw docker; then
 fi
 
 # --------------------------------------------------------------------------
-# 4. Serial/UART access (ttyUSB0 for uart_helper.py)
+# 5. Serial/UART access (ttyUSB0 for uart_helper.py)
 # --------------------------------------------------------------------------
 step "Configuring UART/serial access"
 if ! groups | grep -qw dialout; then
@@ -100,7 +110,7 @@ if ! groups | grep -qw dialout; then
 fi
 
 # --------------------------------------------------------------------------
-# 5. Clone the Armbian build repo
+# 6. Clone the Armbian build repo
 # --------------------------------------------------------------------------
 step "Cloning armbian-build fork"
 if [ -d "$REPO_DIR/.git" ]; then
@@ -123,7 +133,7 @@ info "Branch: $(git -C "$REPO_DIR" branch --show-current)"
 info "Last commit: $(git -C "$REPO_DIR" log --oneline -1)"
 
 # --------------------------------------------------------------------------
-# 6. Python dependencies
+# 7. Python dependencies
 # --------------------------------------------------------------------------
 step "Checking Python dependencies"
 python3 -c "import serial" 2>/dev/null \
@@ -131,7 +141,7 @@ python3 -c "import serial" 2>/dev/null \
     || { pip3 install pyserial --break-system-packages; info "pyserial installed"; }
 
 # --------------------------------------------------------------------------
-# 7. documents/ transfer reminder
+# 8. documents/ transfer reminder
 # --------------------------------------------------------------------------
 step "Documents folder (PDFs, datasheets)"
 cat <<'DOCS'
@@ -155,7 +165,7 @@ Key files in documents/:
 DOCS
 
 # --------------------------------------------------------------------------
-# 8. userpatches/ transfer reminder (gitignored)
+# 9. userpatches/ transfer reminder (gitignored)
 # --------------------------------------------------------------------------
 step "userpatches/ folder (gitignored)"
 cat <<'UP'
@@ -174,13 +184,25 @@ Contents needed for MCD-125:
 UP
 
 # --------------------------------------------------------------------------
-# 9. Quick build test command
+# 10. Summary
 # --------------------------------------------------------------------------
+SSH_IP=$(hostname -I | awk '{print $1}')
 step "All done!"
 cat <<EOF
 
 =======================================================================
   Build machine setup complete.
+
+  SSH access (from this LAN):
+    ssh ${USER}@${SSH_IP}
+
+  Transfer gitignored folders from the old machine:
+    rsync -avz --progress \\
+      ORIGEM:~/Documents/replay/armbian_build/armbian-build/userpatches/ \\
+      ~/armbian-build/userpatches/
+    rsync -avz --progress \\
+      ORIGEM:~/Documents/replay/armbian_build/armbian-build/documents/ \\
+      ~/armbian-build/documents/
 
   If you added yourself to docker/dialout groups, LOG OUT and back in
   (or run: newgrp docker).

@@ -9,11 +9,10 @@
 
 set -e
 
-IMG=$(ls output/images/Armbian-unofficial_*Tomate-mcd125*.img 2>/dev/null | head -1)
+IMG=$(ls -t output/images/Armbian-unofficial_*Tomate-mcd125*.img 2>/dev/null | head -1)
 
 if [ -z "$IMG" ]; then
     echo "ERROR: No Armbian image found in output/images/"
-    echo "Build first: ./compile.sh build BOARD=tomate-mcd125 BRANCH=current RELEASE=bookworm KERNEL_CONFIGURE=no EXPERT=yes"
     exit 1
 fi
 
@@ -75,24 +74,3 @@ sync
 echo ""
 echo "Flash complete!"
 echo ""
-echo "=== Next steps ==="
-echo ""
-echo "1. Copy Android backup to SD boot partition for U-Boot rollback:"
-echo "   ./prepare_sd_rollback.sh"
-echo ""
-echo "2. Safely eject the SD card:"
-echo "   sudo eject $DEV"
-echo ""
-echo "3. Insert SD into Tomate MCD-125, hold recovery button (AV port),"
-echo "   then connect power. Hold ~3 seconds, then release."
-echo ""
-echo "4. Monitor boot via UART:"
-echo "   ./uart_debug.sh"
-echo ""
-echo "Expected UART output:"
-echo "  U-Boot SPL 2024.01 ..."
-echo "  DRAM: 2048 MiB"
-echo "  Trying to boot from MMC1 (SD) ..."
-echo ""
-echo "If BROM falls to FEL (no output): U-Boot TOC0 signature issue."
-echo "Check: strings output/u-boot/u-boot-sunxi-with-spl.bin | grep -E 'TOC0|eGON'"

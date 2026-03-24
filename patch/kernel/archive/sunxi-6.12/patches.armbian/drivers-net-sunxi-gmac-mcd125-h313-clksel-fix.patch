@@ -1,0 +1,43 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Armbian
+Date: Tue, 24 Mar 2026 00:00:00 +0000
+Subject: net: sunxi-gmac: fix EPHY CLK_SEL (bit 18) for H313 internal oscillator
+
+In INT_PHY mode, geth_power_on() used `value |= (3 << 17)` which sets
+both bit 17 (LED polarity) and bit 18 (CLK_SEL=1), routing the emac-25m
+clock to the EPHY reference input.
+
+On H313 (sun50iw9p1), emac-25m is parented to AHB3 (200 MHz) with no
+CCU divider, so CLK_SEL=1 feeds a 200 MHz signal to a port expecting
+25 MHz. This corrupts the EPHY PLL and causes MDIO to return 0xffff for
+all PHY register reads, which prevents SOFT_RST in EMAC_BASIC_CTL1 from
+self-clearing ("All clock inputs must be valid before soft reset" per
+H616 datasheet).
+
+Fix: keep CLK_SEL=0 so the EPHY uses its internal 25 MHz RC oscillator.
+Bit 17 (LED polarity) is still set.
+
+[MCD125-H313-v1] Tomate MCD-125 board fix.
+
+---
+ drivers/net/ethernet/allwinner/sunxi-gmac.c | 6 +++++-
+ 1 file changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/allwinner/sunxi-gmac.c b/drivers/net/ethernet/allwinner/sunxi-gmac.c
+index 111111111111..222222222222 100644
+--- a/drivers/net/ethernet/allwinner/sunxi-gmac.c
++++ b/drivers/net/ethernet/allwinner/sunxi-gmac.c
+@@ -831,6 +831,11 @@ static int geth_power_on(struct geth_priv *priv)
+     if (priv->phy_ext == INT_PHY) {
+         value |= (1 << 15);
+         value &= ~(1 << 16);
+-        value |= (3 << 17);
++        value |= (1 << 17);
++        /* [MCD125-H313-v1] Keep CLK_SEL (bit 18) = 0: EPHY uses its internal
++         * 25 MHz RC oscillator. emac-25m on H313 runs at 200 MHz (AHB3 parent,
++         * no CCU divider) -- feeding it to EPHY as reference corrupts MDIO.
++         * SOFT_RST in EMAC_BASIC_CTL1 never self-clears without a valid MAC
++         * clock input ("All clock inputs must be valid before soft reset"). */
++        value &= ~(1 << 18);
+     } else {
+         value &= ~(1 << 15);

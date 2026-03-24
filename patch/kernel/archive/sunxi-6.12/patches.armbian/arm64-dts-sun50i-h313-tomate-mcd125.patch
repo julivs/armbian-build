@@ -9,8 +9,8 @@ AXP313A PMIC, 100Mbps RMII internal PHY, SSV6558 WiFi/BT (future)
 
 ---
  arch/arm64/boot/dts/allwinner/Makefile                          |   1 +
- arch/arm64/boot/dts/allwinner/sun50i-h313-tomate-mcd125.dts     | 262 ++++++++++
- 2 files changed, 263 insertions(+)
+ arch/arm64/boot/dts/allwinner/sun50i-h313-tomate-mcd125.dts     | 272 ++++++++++
+ 2 files changed, 275 insertions(+)
 
 diff --git a/arch/arm64/boot/dts/allwinner/Makefile b/arch/arm64/boot/dts/allwinner/Makefile
 index b41f031bb..c2e1a9abc 100644
@@ -29,7 +29,7 @@ new file mode 100644
 index 000000000000..111111111111
 --- /dev/null
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-h313-tomate-mcd125.dts
-@@ -0,0 +1,269 @@
+@@ -0,0 +1,272 @@
 +// SPDX-License-Identifier: (GPL-2.0+ or MIT)
 +/*
 + * Device tree for Tomate MCD-125 TV Box
@@ -53,6 +53,7 @@ index 000000000000..111111111111
 +/ {
 +	model = "Tomate MCD-125";
 +	compatible = "tomate,mcd-125", "allwinner,sun50i-h616";
++	armbian-patch-id = "MCD125-DTS-v9-emac1-intphy-internal-osc";
 +
 +	aliases {
 +		mmc0 = &mmc0;
@@ -144,20 +145,22 @@ index 000000000000..111111111111
 +	status = "okay";
 +};
 +
++/* EMAC1: H313 internal RMII EPHY (PHY ID 0x00441400 at MDIO addr 0).
++ * INT_PHY mode (allwinner,use-internal-phy) with internal oscillator:
++ *   - SYSCON bit 15 (INT_PHY_EN) = 1: activates EPHY → MAC RMII 50 MHz clock
++ *     path. Required by datasheet: "All clock inputs must be valid before
++ *     soft reset." Without INT_PHY_EN the EPHY does not drive RMII clock to
++ *     MAC, so EMAC_BASIC_CTL1 SOFT_RST never self-clears.
++ *   - SYSCON bit 18 (CLK_SEL) kept 0 by driver fix [MCD125-H313-v1]:
++ *     EPHY uses internal 25 MHz RC oscillator. emac-25m clock runs at 200 MHz
++ *     on H313 (AHB3 parent, no CCU divider) and must NOT be the EPHY reference.
++ *   - tx-delay=7, rx-delay=31 already set in base DTSI (sun50i-h616.dtsi)
++ *   - mdio1 child node already in base DTSI; PHY found at addr 0 automatically
++ * [MCD125-DTS-v9-emac1-intphy-internal-osc] */
 +&emac1 {
-+	pinctrl-names = "default";
-+	pinctrl-0 = <&rmii_pins>;
 +	phy-mode = "rmii";
-+	phy-handle = <&rmii_phy>;
 +	allwinner,use-internal-phy;
 +	status = "okay";
-+};
-+
-+&mdio1 {
-+	rmii_phy: ethernet-phy@0 {
-+		compatible = "ethernet-phy-ieee802.3-c22";
-+		reg = <0>;
-+	};
 +};
 +
 +/* SD card slot */

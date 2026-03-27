@@ -27,7 +27,7 @@ diff --git a/drivers/net/ethernet/allwinner/sunxi-gmac.c b/drivers/net/ethernet/
 index 111111111111..222222222222 100644
 --- a/drivers/net/ethernet/allwinner/sunxi-gmac.c
 +++ b/drivers/net/ethernet/allwinner/sunxi-gmac.c
-@@ -831,6 +831,11 @@ static int geth_power_on(struct geth_priv *priv)
+@@ -831,6 +831,12 @@ static int geth_power_on(struct geth_priv *priv)
      if (priv->phy_ext == INT_PHY) {
          value |= (1 << 15);
          value &= ~(1 << 16);

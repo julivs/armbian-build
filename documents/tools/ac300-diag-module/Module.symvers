@@ -1,0 +1,11 @@
+# Module.symvers para Android k4.9.170 arm64 (MCD-125 / H313)
+# CRCs extraídos dos módulos do próprio dispositivo (mali_kbase.ko, bcmdhd.ko, xr819.ko)
+# Formato: CRC<TAB>symbol<TAB>vmlinux<TAB>EXPORT_SYMBOL
+#
+# Para adicionar novos símbolos: ver README.md seção "Adicionando novos símbolos"
+0x2e1445dd	module_layout	vmlinux	EXPORT_SYMBOL
+0x27e1a049	printk	vmlinux	EXPORT_SYMBOL
+0xf24b3dfe	__ioremap	vmlinux	EXPORT_SYMBOL
+0x45a55ec8	__iounmap	vmlinux	EXPORT_SYMBOL
+0x9e7d6bd0	__udelay	vmlinux	EXPORT_SYMBOL
+0xeae3dfd6	__const_udelay	vmlinux	EXPORT_SYMBOL

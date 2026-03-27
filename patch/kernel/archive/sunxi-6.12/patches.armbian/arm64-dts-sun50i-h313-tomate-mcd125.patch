@@ -5,31 +5,18 @@ Subject: arm64: dts: sun50i-h313-tomate-mcd125
 
 Add support for Tomate MCD-125 TV Box
 Allwinner H313 (sun50iw9p1), LPDDR3 2GB, Samsung eMMC 16GB (KMQ820013M)
-AXP313A PMIC, 100Mbps RMII internal PHY, SSV6558 WiFi/BT (future)
-
+AXP313A PMIC, 100Mbps RMII internal PHY (AC300), SSV6558 WiFi/BT (future)
+DRV-v8: no PWM5, CLK_SEL=1 via SYSCON bit18 only. [MCD125-DTS-v19]
 ---
- arch/arm64/boot/dts/allwinner/Makefile                          |   1 +
- arch/arm64/boot/dts/allwinner/sun50i-h313-tomate-mcd125.dts     | 272 ++++++++++
- 2 files changed, 275 insertions(+)
+ arch/arm64/boot/dts/allwinner/sun50i-h313-tomate-mcd125.dts | 298 +
+ 1 file changed, 298 insertions(+)
 
-diff --git a/arch/arm64/boot/dts/allwinner/Makefile b/arch/arm64/boot/dts/allwinner/Makefile
-index b41f031bb..c2e1a9abc 100644
---- a/arch/arm64/boot/dts/allwinner/Makefile
-+++ b/arch/arm64/boot/dts/allwinner/Makefile
-@@ -39,6 +39,7 @@ dtb-$(CONFIG_ARCH_SUNXI) += sun50i-h6-pine-h64.dtb
- dtb-$(CONFIG_ARCH_SUNXI) += sun50i-h6-pine-h64-model-b.dtb
- dtb-$(CONFIG_ARCH_SUNXI) += sun50i-h6-tanix-tx6.dtb
- dtb-$(CONFIG_ARCH_SUNXI) += sun50i-h6-tanix-tx6-mini.dtb
-+dtb-$(CONFIG_ARCH_SUNXI) += sun50i-h313-tomate-mcd125.dtb
- dtb-$(CONFIG_ARCH_SUNXI) += sun50i-h313-mxqpro-lpddr3.dtb
- dtb-$(CONFIG_ARCH_SUNXI) += sun50i-h313-tanix-tx1.dtb
- dtb-$(CONFIG_ARCH_SUNXI) += sun50i-h616-bigtreetech-cb1-manta.dtb
 diff --git a/arch/arm64/boot/dts/allwinner/sun50i-h313-tomate-mcd125.dts b/arch/arm64/boot/dts/allwinner/sun50i-h313-tomate-mcd125.dts
 new file mode 100644
-index 000000000000..111111111111
+index 000000000..000000001
 --- /dev/null
 +++ b/arch/arm64/boot/dts/allwinner/sun50i-h313-tomate-mcd125.dts
-@@ -0,0 +1,272 @@
+@@ -0,0 +1,298 @@
 +// SPDX-License-Identifier: (GPL-2.0+ or MIT)
 +/*
 + * Device tree for Tomate MCD-125 TV Box
@@ -53,7 +40,7 @@ index 000000000000..111111111111
 +/ {
 +	model = "Tomate MCD-125";
 +	compatible = "tomate,mcd-125", "allwinner,sun50i-h616";
-+	armbian-patch-id = "MCD125-DTS-v9-emac1-intphy-internal-osc";
++	armbian-patch-id = "MCD125-DTS-v19-drv-v8-no-pwm5";
 +
 +	aliases {
 +		mmc0 = &mmc0;
@@ -109,6 +96,7 @@ index 000000000000..111111111111
 +		reset-gpios = <&pio 6 18 GPIO_ACTIVE_LOW>; /* PG18 WLAN+BT enable */
 +		post-power-on-delay-ms = <200>;
 +	};
++
 +};
 +
 +&cpu0 {
@@ -145,22 +133,47 @@ index 000000000000..111111111111
 +	status = "okay";
 +};
 +
-+/* EMAC1: H313 internal RMII EPHY (PHY ID 0x00441400 at MDIO addr 0).
-+ * INT_PHY mode (allwinner,use-internal-phy) with internal oscillator:
-+ *   - SYSCON bit 15 (INT_PHY_EN) = 1: activates EPHY → MAC RMII 50 MHz clock
-+ *     path. Required by datasheet: "All clock inputs must be valid before
-+ *     soft reset." Without INT_PHY_EN the EPHY does not drive RMII clock to
-+ *     MAC, so EMAC_BASIC_CTL1 SOFT_RST never self-clears.
-+ *   - SYSCON bit 18 (CLK_SEL) kept 0 by driver fix [MCD125-H313-v1]:
-+ *     EPHY uses internal 25 MHz RC oscillator. emac-25m clock runs at 200 MHz
-+ *     on H313 (AHB3 parent, no CCU divider) and must NOT be the EPHY reference.
-+ *   - tx-delay=7, rx-delay=31 already set in base DTSI (sun50i-h616.dtsi)
-+ *   - mdio1 child node already in base DTSI; PHY found at addr 0 automatically
-+ * [MCD125-DTS-v9-emac1-intphy-internal-osc] */
++/*
++ * EMAC1: H313 internal RMII EPHY via mainline dwmac-sun8i driver.
++ *
++ * The DTSI base node uses compatible "allwinner,sunxi-gmac" (BSP driver).
++ * We override key properties so the mainline dwmac-sun8i driver binds:
++ *   - compatible: triggers dwmac-sun8i binding (emac_variant_h313)
++ *   - syscon = <&syscon 1>: EMAC1 clock register at SYSCON+0x34
++ *   - clocks/clock-names: "stmmaceth" = CLK_BUS_EMAC1 (MAC bus clock only)
++ *
++ * AC300 receives 24MHz via SoC-internal HOSC path (SYSCON CLK_SEL=1,
++ * bit18).  CLK_EMAC_25M and PWM5/PA12 are NOT needed — confirmed from
++ * Android k4.9.170 diagnostic: PA12_MUX=0 (GPIO), CLK_25M GATE=0.
++ *
++ * The AC300 EPHY (MDIO addr 0) is initialized via direct MII register
++ * writes in dwmac-sun8i.c pre_scan_init before mdiobus_register().
++ * tx/rx delays match Android BSP. [MCD125-DTS-v19-drv-v8-no-pwm5]
++ */
 +&emac1 {
++	compatible = "allwinner,sun50i-h313-emac";
++	syscon = <&syscon 1>;
++	interrupt-names = "macirq";
++	clocks = <&ccu CLK_BUS_EMAC1>;
++	clock-names = "stmmaceth";
++	pinctrl-0 = <&rmii_pins>;
++	pinctrl-names = "default";
 +	phy-mode = "rmii";
-+	allwinner,use-internal-phy;
++	phy-handle = <&rmii_phy>;
++	phy-supply = <&reg_aldo1>;
++	allwinner,rx-delay-ps = <3100>;
++	allwinner,tx-delay-ps = <700>;
 +	status = "okay";
++};
++
++&mdio1 {
++	compatible = "snps,dwmac-mdio";
++	rmii_phy: ethernet-phy@0 {
++		/* AC300 co-packaged EPHY at MDIO addr 0.
++		 * Initialized via MII writes in dwmac-sun8i probe (internal_ephy
++		 * path). No I2C or MFD driver needed. [MCD125-DTS-v18] */
++		reg = <0>;
++	};
 +};
 +
 +/* SD card slot */
@@ -302,7 +315,3 @@ index 000000000000..111111111111
 +&ahub1_mach {
 +	status = "okay";
 +};
-
---
-Armbian
-

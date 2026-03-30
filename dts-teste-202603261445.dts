@@ -1,0 +1,181 @@
+// SPDX-License-Identifier: (GPL-2.0+ or MIT)
+/*
+ * Device tree ajustado para Tomate MCD-125 TV Box
+ * SoC:     Allwinner H313 (sun50iw9p1)
+ * PHY:     AC200/AC300 Interno via GMAC1 (emac1)
+ */
+
+/dts-v1/;
+
+#include "sun50i-h616.dtsi"
+#include "sun50i-h313-cpu-opp.dtsi"
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/leds/common.h>
+
+/ {
+	model = "Tomate MCD-125";
+	compatible = "tomate,mcd-125", "allwinner,sun50i-h616";
+	armbian-patch-id = "MCD125-DTS-v19-final-adjust";
+
+	aliases {
+		mmc0 = &mmc0;
+		mmc1 = &mmc1;
+		mmc2 = &mmc2;
+		ethernet0 = &emac1;
+		serial0 = &uart0;
+	};
+
+	chosen {
+		stdout-path = "serial0:115200n8";
+	};
+
+	reg_vcc5v: vcc5v {
+		compatible = "regulator-fixed";
+		regulator-name = "vcc-5v";
+		regulator-min-microvolt = <5000000>;
+		regulator-max-microvolt = <5000000>;
+		regulator-always-on;
+	};
+
+	/* Clock de referência necessário para o driver do AC200 */
+	ac200_clk: ac200-clk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <24000000>;
+		clock-output-names = "ac200-clk";
+	};
+};
+
+&pio {
+	/* Pinos I2C3 extraídos do Android DTS: PA10 e PA11 */
+	i2c3_pa_pins: i2c3-pa-pins {
+		pins = "PA10", "PA11";
+		function = "i2c3";
+		bias-pull-up;
+	};
+
+	/* Pino de saída de clock para a PHY AC200 no PB0 */
+	ac200_clk_pin: ac200-clk-pin {
+		pins = "PB0";
+		function = "ac200";
+		drive-strength = <20>;
+	};
+};
+
+&i2c3 {
+	status = "okay";
+	pinctrl-names = "default";
+	/* Vincula os pinos de dados e o pino de clock ao barramento */
+	pinctrl-0 = <&i2c3_pa_pins>, <&ac200_clk_pin>;
+
+	ac200: mfd@10 {
+		compatible = "x-powers,ac200";
+		reg = <0x10>;
+		clocks = <&ac200_clk>;
+
+		ac200_ephy_ctl: syscon {
+			compatible = "x-powers,ac200-ephy-ctl";
+			#clock-cells = <0>;
+			#reset-cells = <0>;
+			status = "okay";
+		};
+	};
+};
+
+&emac1 {
+	compatible = "allwinner,sun50i-h616-emac";
+	syscon = <&syscon 1>; /* 0x03000034 */
+	phy-mode = "rmii";
+	phy-handle = <&rmii_phy>;
+	
+	/* Valores exatos do seu hardware Android */
+	allwinner,rx-delay-ps = <3100>;
+	allwinner,tx-delay-ps = <700>;
+	
+	status = "okay";
+};
+
+&mdio1 {
+	rmii_phy: ethernet-phy@1 {
+		compatible = "ethernet-phy-ieee802.3-c22";
+		reg = <1>; /* Endereço 1 conforme seu dump Android */
+		clocks = <&ac200_ephy_ctl>;
+		resets = <&ac200_ephy_ctl>;
+	};
+};
+
+&r_i2c {
+	status = "okay";
+
+	axp313a: pmic@36 {
+		compatible = "x-powers,axp313a";
+		reg = <0x36>;
+		
+		regulators {
+			reg_dcdc1: dcdc1 {
+				regulator-always-on;
+				regulator-min-microvolt = <810000>;
+				regulator-max-microvolt = <1160000>;
+				regulator-name = "vdd-gpu";
+			};
+
+			reg_dcdc2: dcdc2 {
+				regulator-always-on;
+				regulator-min-microvolt = <810000>;
+				regulator-max-microvolt = <1160000>;
+				regulator-name = "vdd-cpu";
+			};
+
+			reg_dcdc3: dcdc3 {
+				regulator-always-on;
+				regulator-min-microvolt = <1200000>;
+				regulator-max-microvolt = <1200000>;
+				regulator-name = "vdd-dram";
+			};
+
+			reg_aldo1: aldo1 {
+				regulator-always-on;
+				regulator-min-microvolt = <1800000>;
+				regulator-max-microvolt = <1800000>;
+				regulator-name = "vcc1v8";
+			};
+
+			reg_dldo1: dldo1 {
+				regulator-always-on;
+				regulator-min-microvolt = <3300000>;
+				regulator-max-microvolt = <3300000>;
+				regulator-name = "vcc3v3";
+			};
+		};
+	};
+};
+
+/* Restante das configurações (USB, UART, MMC) permanecem conforme seu original */
+&uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&uart0_ph_pins>;
+	status = "okay";
+};
+
+&mmc0 {
+	vmmc-supply = <&reg_dldo1>;
+	broken-cd;
+	bus-width = <4>;
+	status = "okay";
+};
+
+&mmc2 {
+	vmmc-supply = <&reg_dldo1>;
+	bus-width = <8>;
+	non-removable;
+	cap-mmc-hw-reset;
+	status = "okay";
+};
+
+&usbphy {
+	status = "okay";
+};
+
+&ehci0 { status = "okay"; };
+&ohci0 { status = "okay"; };
